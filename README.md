@@ -1,5 +1,5 @@
 # chat-bot
-This repository will showcase my solution for respond.io task #2 problem.
+This repository will showcase my solution for respond.io task #1 problem.
 
 ## Setup
 Run `npm install`
