@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
   res.send("Respond.io Chat Bot v1.0 reporting for duty!");
 });
 
-app.use("/", webhookRoutes);
+app.use("/webhook", webhookRoutes);
 app.use("/products", productRoutes);
 
 app.listen(3000, () => {

@@ -25,7 +25,10 @@ async function handleChatBotGreeting({ payload }) {
     return;
   }
 
-  const sendOutAutoGreeting = _autoGreetingEligibility({ messages });
+  const sendOutAutoGreeting = await _autoGreetingEligibility({
+    messages,
+    greetingFrequencyInHours: 24,
+  });
   if (!sendOutAutoGreeting) {
     console.log(`sendOutAutoGreeting is ${sendOutAutoGreeting}`);
     return false;
@@ -58,7 +61,7 @@ async function fetchConversation({ senderId }) {
     const response = await axios.get(url);
     return response.data.data[0];
   } catch (error) {
-    console.error("Fetch conversation API failure", error);
+    console.error("fetchConversation API failure", error);
     throw error;
   }
 }
@@ -69,7 +72,18 @@ async function fetchMessagesByConversationId(conversationId) {
     const response = await axios.get(url);
     return response.data.messages.data;
   } catch (error) {
-    console.error("Fetch conversation API failure", error);
+    console.error("fetchMessagesByConversationId API failure", error);
+    throw error;
+  }
+}
+
+async function fetchMessageById(id) {
+  try {
+    const url = `${facebookGraphBaseUrl}/${id}?access_token=${pageToken}`;
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    console.error("fetchMessageById API failure", error);
     throw error;
   }
 }
@@ -80,7 +94,7 @@ async function sendMessageByChatBot({ recipientId, message }) {
     const response = await axios.post(url);
     return response;
   } catch (error) {
-    console.error("Fetch conversation API failure", error);
+    console.error("sendMessageByChatBot API failure", error);
     throw error;
   }
 }
@@ -207,14 +221,27 @@ function _validateWebhookPayload(payload) {
 }
 
 // greetingFrequencyInHours defaulted to -1 which will only send greeting on first ever message
-function _autoGreetingEligibility({ messages, greetingFrequencyInHours = -1 }) {
+async function _autoGreetingEligibility({
+  messages,
+  greetingFrequencyInHours = -1,
+}) {
   let sendOutAutoGreeting = false;
   if (messages.length == 1) {
     sendOutAutoGreeting = true;
   } else if (messages.length > 1 && greetingFrequencyInHours != -1) {
     // Fetching index 1 because last message was already sent before this function is hit.
     const lastMessageSentId = messages[1].id;
-    // TODO: Get created_time of message from /<message_id> API and check if greetingFrequencyInHours has passed
+    const lastMessageSentDetails = await fetchMessageById(lastMessageSentId);
+    let { created_time: lastMessageSentAt } = lastMessageSentDetails;
+    lastMessageSentAt = moment(lastMessageSentAt);
+    now = moment();
+    const timeDifferenceBetweenLastMessages = now.diff(
+      (lastMessageSentAt, "hours")
+    );
+
+    if (timeDifferenceBetweenLastMessages >= greetingFrequencyInHours) {
+      sendOutAutoGreeting = true;
+    }
   }
   return sendOutAutoGreeting;
 }
